@@ -88,7 +88,7 @@ const useStore = () => {
   const [data, setData] = useState(() => {
     const saved = {};
     try {
-      const keys = ["products", "categories", "inventory", "sales", "purchases", "suppliers", "customers", "maintenance", "employees", "expenses", "bankAccounts", "currencies", "cashBox", "cashLedger"];
+      const keys = ["products", "categories", "inventory", "sales", "purchases", "suppliers", "customers", "maintenance", "employees", "expenses", "bankAccounts", "currencies", "cashBox", "cashLedger", "auditLog"];
       keys.forEach((k) => {
         const v = localStorage.getItem("erp_" + k);
         if (v) saved[k] = JSON.parse(v);
@@ -130,6 +130,7 @@ const useStore = () => {
         balanceEUR: 0
       },
       cashLedger: saved.cashLedger || [],
+      auditLog: saved.auditLog || [],
       // { id, date, time, type, desc, amountTRY, amountUSD, amountEUR, dir, ref }
       nextId: saved.nextId || { product: 6, sale: 1, purchase: 1, maintenance: 1, customer: 1, supplier: 1, employee: 1, expense: 1 }
     };
@@ -175,6 +176,7 @@ const useStore = () => {
     currentUser: null,
     cashBox: { balanceTRY: 0, balanceUSD: 0, balanceEUR: 0 },
     cashLedger: [],
+    auditLog: [],
     units: [],
     nextId: {},
     ...data,
@@ -200,7 +202,8 @@ const useStore = () => {
       return { ...prev, cashBox: box, cashLedger: ledger };
     });
   }, [save]);
-  return { data: safeData, update, nextId, moveCash };
+  const addAudit = useCallback((action, desc) => { setData(prev => { const e={id:Date.now(),timestamp:new Date().toISOString(),action,description:desc,user:prev.currentUser?.name||"نظام"}; const al=[e,...(prev.auditLog||[])].slice(0,1000); save("auditLog",al); return {...prev,auditLog:al}; }); }, [save]);
+  return { data: safeData, update, nextId, moveCash, addAudit };
 };
 const AlHramLogo = ({ size = 80, darkBg = false }) => {
   const gold = "#c8922a";
@@ -297,12 +300,12 @@ const CashBoxWidget = ({ cashBox, onClick }) => {
     /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: "#7a4a00", fontSize: 9, fontWeight: 700 } }, "\u0627\u0644\u0635\u0646\u062F\u0648\u0642"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.green, fontWeight: 800, fontSize: 12 } }, "\u20BA", (box.balanceTRY || 0).toLocaleString()), /* @__PURE__ */ React.createElement("span", { style: { color: "#2980b9", fontWeight: 800, fontSize: 12 } }, "$", (box.balanceUSD || 0).toFixed(0)), (box.balanceEUR || 0) !== 0 && /* @__PURE__ */ React.createElement("span", { style: { color: "#8e44ad", fontWeight: 800, fontSize: 12 } }, "\u20AC", (box.balanceEUR || 0).toFixed(0))))
   );
 };
-const LoginScreen = ({ onLogin, users }) => {
+const hashPasswordSync=(p)=>{let h=5381,s="erp_2024_"+p;for(let i=0;i<s.length;i++){h=((h<<5)+h)+s.charCodeAt(i);h=h&0x7fffffff;}return"ph_"+h.toString(16).padStart(8,"0");};const LoginScreen = ({ onLogin, users }) => {
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
   const handleLogin = () => {
-    const user = users.find((u) => u.username === form.username && u.password === form.password);
+    const user = users.find((u) => u.username === form.username && (u.password === form.password || u.password === hashPasswordSync(form.password)));
     if (user) onLogin(user);
     else setError("\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629");
   };
@@ -2306,6 +2309,275 @@ const ReportsModule = ({ sales, products, expenses, purchases }) => {
     return /* @__PURE__ */ React.createElement("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { width: 28, height: 28, background: C.surface, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: C.accent, fontSize: 13 } }, i + 1), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontSize: 13, fontWeight: 600 } }, p.name), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 11 } }, sold, " \u0648\u062D\u062F\u0629 \u0645\u0628\u0627\u0639\u0629")), /* @__PURE__ */ React.createElement("div", { style: { color: C.green, fontWeight: 700 } }, "$", revenue));
   }))), /* @__PURE__ */ React.createElement(Card, { title: "\u0645\u0644\u062E\u0635 \u0633\u0631\u064A\u0639" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderRadius: 10, padding: 14, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12, marginBottom: 6 } }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { color: C.accent, fontSize: 20, fontWeight: 800 } }, "$", totalPurchases.toLocaleString())), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderRadius: 10, padding: 14, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12, marginBottom: 6 } }, "\u0647\u0627\u0645\u0634 \u0627\u0644\u0631\u0628\u062D"), /* @__PURE__ */ React.createElement("div", { style: { color: grossProfit / totalRevenue * 100 >= 0 ? C.green : C.red, fontSize: 20, fontWeight: 800 } }, totalRevenue > 0 ? Math.round(grossProfit / totalRevenue * 100) : 0, "%")), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderRadius: 10, padding: 14, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12, marginBottom: 6 } }, "\u0645\u062A\u0648\u0633\u0637 \u0642\u064A\u0645\u0629 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"), /* @__PURE__ */ React.createElement("div", { style: { color: C.yellow, fontSize: 20, fontWeight: 800 } }, "$", sales.length ? Math.round(totalRevenue / sales.length) : 0)))));
 };
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 1: رسوم بيانية SVG
+// ═══════════════════════════════════════════════════════════════
+const MiniBarChart = ({ data: d, color, height: h = 80 }) => {
+  if (!d || !d.length) return null;
+  const max = Math.max(...d.map(x => x.value), 1);
+  const bw = 34, gap = 5, sw = d.length * (bw + gap) - gap;
+  return React.createElement("svg", { width: "100%", height: h + 28, viewBox: `0 0 ${sw} ${h + 28}`, style: { overflow: "visible" } },
+    d.map((item, i) => {
+      const bh = Math.max(3, Math.round((item.value / max) * h));
+      const x = i * (bw + gap), y = h - bh;
+      return React.createElement("g", { key: i },
+        React.createElement("rect", { x, y, width: bw, height: bh, fill: color || C.accent, rx: 3, opacity: 0.82 }),
+        React.createElement("text", { x: x + bw / 2, y: h + 16, textAnchor: "middle", fill: C.muted, fontSize: 8, fontFamily: "Tajawal,sans-serif" }, item.label),
+        item.value > 0 && React.createElement("text", { x: x + bw / 2, y: y - 3, textAnchor: "middle", fill: C.text, fontSize: 8, fontWeight: "bold", fontFamily: "Tajawal,sans-serif" },
+          item.value >= 1000 ? (item.value / 1000).toFixed(1) + "k" : item.value)
+      );
+    })
+  );
+};
+
+const DashboardCharts = ({ sales, expenses }) => {
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+    const key = d.toISOString().slice(0, 7);
+    const label = d.toLocaleDateString("ar-EG", { month: "short" });
+    const value = Math.round((sales || []).filter(s => s.date && s.date.startsWith(key)).reduce((s, x) => s + (x.total || 0), 0));
+    const expVal = Math.round((expenses || []).filter(e => e.date && e.date.startsWith(key)).reduce((s, x) => s + (x.amount || 0), 0));
+    return { label, value, expVal };
+  });
+  return React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 } },
+    React.createElement(Card, { title: "📊 المبيعات — آخر 6 أشهر" }, React.createElement(MiniBarChart, { data: months, color: C.green, height: 85 })),
+    React.createElement(Card, { title: "💸 المصروفات — آخر 6 أشهر" }, React.createElement(MiniBarChart, { data: months.map(m => ({ label: m.label, value: m.expVal })), color: C.red, height: 85 }))
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 2: تنبيهات الديون المتأخرة
+// ═══════════════════════════════════════════════════════════════
+const DebtAlertsCard = ({ customers }) => {
+  const debtors = (customers || []).filter(c => (c.balance || 0) > 0).sort((a, b) => b.balance - a.balance).slice(0, 6);
+  return React.createElement(Card, { title: "💳 الذمم المدينة المستحقة" },
+    debtors.length === 0
+      ? React.createElement("div", { style: { color: C.green, textAlign: "center", padding: 16, fontSize: 13 } }, "✅ لا توجد ذمم مستحقة")
+      : React.createElement("div", null,
+          React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, debtors.length + " عميل لديهم رصيد مستحق"),
+          debtors.map(customer => React.createElement("div", { key: customer.id,
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid " + C.border }
+          },
+            React.createElement("span", { style: { color: C.text, fontSize: 13 } }, customer.name),
+            React.createElement(Badge, { color: (customer.balance || 0) > 500 ? C.red : C.yellow }, "$" + (customer.balance || 0).toLocaleString())
+          ))
+        )
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 7: جرس الإشعارات
+// ═══════════════════════════════════════════════════════════════
+const NotificationBell = ({ products, maintenance, customers }) => {
+  const [open, setOpen] = React.useState(false);
+  const lowStock = (products || []).filter(p => p.stock <= p.minStock && p.minStock > 0);
+  const pendingMaint = (maintenance || []).filter(m => m.status !== "تم التسليم" && m.status !== "مغلقة");
+  const debtors = (customers || []).filter(c => (c.balance || 0) > 0);
+  const notifs = [
+    ...lowStock.map(p => ({ id: "ls" + p.id, icon: "⚠️", text: p.name + ": رصيد منخفض (" + p.stock + " قطعة)", color: C.yellow })),
+    ...pendingMaint.map(m => ({ id: "mt" + m.id, icon: "🔧", text: "صيانة: " + m.customerName, color: C.orange })),
+    ...debtors.map(cust => ({ id: "dt" + cust.id, icon: "💳", text: cust.name + ": دين $" + (cust.balance || 0).toLocaleString(), color: C.red })),
+  ];
+  const count = notifs.length;
+  React.useEffect(() => {
+    if (!open) return;
+    const fn = e => { if (!e.target.closest("#nbell")) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, [open]);
+  return React.createElement("div", { id: "nbell", style: { position: "relative" } },
+    React.createElement("button", { onClick: () => setOpen(o => !o),
+      style: { background: count > 0 ? C.accent + "22" : "transparent", border: "1px solid " + (count > 0 ? C.accent : C.border), borderRadius: 10, padding: "5px 10px", cursor: "pointer", fontFamily: "Tajawal,sans-serif", display: "flex", alignItems: "center", gap: 4 }
+    },
+      "🔔",
+      count > 0 && React.createElement("span", { style: { background: C.red, color: "#fff", borderRadius: "50%", width: 17, height: 17, fontSize: 9, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" } }, count > 99 ? "99+" : count)
+    ),
+    open && React.createElement("div", { style: { position: "absolute", top: "115%", left: 0, background: "#fff", border: "1px solid " + C.border, borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.13)", width: 300, maxHeight: 380, overflowY: "auto", zIndex: 1000, direction: "rtl" } },
+      React.createElement("div", { style: { padding: "12px 16px", borderBottom: "1px solid " + C.border, fontWeight: 800, color: C.text, fontSize: 13, fontFamily: "Tajawal,sans-serif" } }, "🔔 الإشعارات (" + count + ")"),
+      count === 0
+        ? React.createElement("div", { style: { padding: 20, color: C.muted, textAlign: "center", fontSize: 13 } }, "✅ لا توجد إشعارات")
+        : notifs.map((n, i) => React.createElement("div", { key: n.id, style: { padding: "9px 16px", borderBottom: "1px solid " + C.border, fontSize: 12, display: "flex", gap: 8, alignItems: "flex-start", fontFamily: "Tajawal,sans-serif" } },
+            React.createElement("span", { style: { color: n.color, flexShrink: 0 } }, n.icon),
+            React.createElement("span", { style: { color: C.text } }, n.text)
+          ))
+    )
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 3: القوائم المالية
+// ═══════════════════════════════════════════════════════════════
+const FinancialStatementsModule = ({ sales, purchases, expenses, products, customers, suppliers, bankAccounts, cashBox }) => {
+  const [tab, setTab] = React.useState("income");
+  const totalRevenue = (sales || []).reduce((s, x) => s + (x.total || 0), 0);
+  const totalCOGS = (sales || []).reduce((s, sale) => s + (sale.items || []).reduce((is, item) => {
+    const p = (products || []).find(p2 => p2.id === item.productId);
+    return is + ((p ? p.cost : 0) || 0) * item.qty;
+  }, 0), 0);
+  const totalExpenses = (expenses || []).reduce((s, x) => s + (x.amount || 0), 0);
+  const grossProfit = totalRevenue - totalCOGS;
+  const netProfit = grossProfit - totalExpenses;
+  const totalReceivables = (customers || []).reduce((s, x) => s + (x.balance || 0), 0);
+  const totalPayables = (suppliers || []).reduce((s, x) => s + (x.balance || 0), 0);
+  const totalInventory = (products || []).reduce((s, p) => s + ((p.cost || 0) * (p.stock || 0)), 0);
+  const usdRate = parseFloat(localStorage.getItem("erp_usdtry") || "32.5");
+  const cashUSD = ((cashBox && cashBox.balanceUSD) || 0) + ((cashBox && cashBox.balanceTRY) || 0) / usdRate;
+  const totalBanks = (bankAccounts || []).reduce((s, b) => s + (b.balance || 0), 0);
+  const totalAssets = totalInventory + totalReceivables + cashUSD + totalBanks;
+  const equity = totalAssets - totalPayables;
+
+  const Row = ({ label, value, bold, color, indent }) =>
+    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid " + C.border, paddingRight: indent ? 20 : 0 } },
+      React.createElement("span", { style: { color: bold ? C.text : C.muted, fontWeight: bold ? 700 : 400, fontSize: 13 } }, label),
+      React.createElement("span", { style: { color: color || C.text, fontWeight: bold ? 800 : 600, fontSize: 13, fontFamily: "monospace" } }, "$" + Math.round(Math.abs(value)).toLocaleString() + (value < 0 ? " -" : ""))
+    );
+
+  const tabs2 = [{ id: "income", label: "قائمة الدخل" }, { id: "balance", label: "الميزانية العمومية" }];
+  return React.createElement("div", null,
+    React.createElement("h2", { style: { color: C.text, margin: "0 0 16px", fontSize: 20, fontWeight: 800, fontFamily: "Tajawal,sans-serif" } }, "📊 القوائم المالية"),
+    React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } },
+      tabs2.map(t => React.createElement("button", { key: t.id, onClick: () => setTab(t.id),
+        style: { padding: "8px 20px", borderRadius: 8, border: "1px solid " + C.border, background: tab === t.id ? C.accent : "#fff", color: tab === t.id ? "#fff" : C.text, cursor: "pointer", fontFamily: "Tajawal,sans-serif", fontWeight: 600, fontSize: 13 }
+      }, t.label))
+    ),
+    tab === "income"
+      ? React.createElement(Card, { title: "📋 قائمة الدخل" },
+          React.createElement(Row, { label: "إجمالي الإيرادات", value: totalRevenue, bold: true, color: C.green }),
+          React.createElement(Row, { label: "تكلفة البضاعة المباعة", value: -totalCOGS, color: C.red, indent: true }),
+          React.createElement(Row, { label: "مجمل الربح", value: grossProfit, bold: true, color: grossProfit >= 0 ? C.green : C.red }),
+          React.createElement(Row, { label: "المصروفات التشغيلية", value: -totalExpenses, color: C.red, indent: true }),
+          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", padding: "12px 8px", background: netProfit >= 0 ? "#e8f5e9" : "#fce4e4", borderRadius: 8, marginTop: 8 } },
+            React.createElement("span", { style: { color: C.text, fontWeight: 800, fontSize: 15, fontFamily: "Tajawal,sans-serif" } }, "صافي الربح / الخسارة"),
+            React.createElement("span", { style: { color: netProfit >= 0 ? C.green : C.red, fontWeight: 900, fontSize: 18, fontFamily: "monospace" } }, (netProfit >= 0 ? "+$" : "-$") + Math.round(Math.abs(netProfit)).toLocaleString())
+          )
+        )
+      : React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 } },
+          React.createElement(Card, { title: "الأصول" },
+            React.createElement(Row, { label: "قيمة المخزون", value: totalInventory }),
+            React.createElement(Row, { label: "الذمم المدينة", value: totalReceivables }),
+            React.createElement(Row, { label: "النقد", value: cashUSD }),
+            React.createElement(Row, { label: "الحسابات البنكية", value: totalBanks }),
+            React.createElement(Row, { label: "إجمالي الأصول", value: totalAssets, bold: true, color: C.green })
+          ),
+          React.createElement(Card, { title: "الخصوم وحقوق الملكية" },
+            React.createElement(Row, { label: "الذمم الدائنة (موردون)", value: totalPayables, color: C.red }),
+            React.createElement(Row, { label: "إجمالي الخصوم", value: totalPayables, bold: true, color: C.red }),
+            React.createElement("div", { style: { borderTop: "2px solid " + C.accent, marginTop: 8, paddingTop: 8 } },
+              React.createElement(Row, { label: "حقوق الملكية", value: equity, bold: true, color: equity >= 0 ? C.green : C.red })
+            )
+          )
+        )
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 4: تقارير المقارنة
+// ═══════════════════════════════════════════════════════════════
+const ComparisonReportsModule = ({ sales, expenses, purchases }) => {
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+    const key = d.toISOString().slice(0, 7);
+    const label = d.toLocaleDateString("ar-EG", { year: "numeric", month: "short" });
+    const rev = Math.round((sales || []).filter(s => s.date && s.date.startsWith(key)).reduce((s, x) => s + (x.total || 0), 0));
+    const exp = Math.round((expenses || []).filter(e => e.date && e.date.startsWith(key)).reduce((s, x) => s + (x.amount || 0), 0));
+    const pur = Math.round((purchases || []).filter(p => p.date && p.date.startsWith(key)).reduce((s, x) => s + (x.total || 0), 0));
+    return { label, key, rev, exp, pur, profit: rev - exp };
+  });
+  const tdStyle = { padding: "8px 10px", textAlign: "center", fontFamily: "monospace", fontSize: 12 };
+  const thStyle = { padding: "8px 10px", textAlign: "center", color: C.muted, fontSize: 11, fontFamily: "Tajawal,sans-serif" };
+  return React.createElement("div", null,
+    React.createElement("h2", { style: { color: C.text, margin: "0 0 20px", fontSize: 20, fontWeight: 800, fontFamily: "Tajawal,sans-serif" } }, "📈 تقارير المقارنة الشهرية"),
+    React.createElement(Card, { title: "مقارنة آخر 6 أشهر" },
+      React.createElement("div", { style: { overflowX: "auto" } },
+        React.createElement("table", { style: { width: "100%", borderCollapse: "collapse" } },
+          React.createElement("thead", null, React.createElement("tr", { style: { background: C.bg } },
+            React.createElement("th", { style: { ...thStyle, textAlign: "right" } }, "البيان"),
+            ...months.map(m => React.createElement("th", { key: m.key, style: thStyle }, m.label))
+          )),
+          React.createElement("tbody", null,
+            [["المبيعات", months.map(m => m.rev), C.green], ["المشتريات", months.map(m => m.pur), C.orange], ["المصروفات", months.map(m => m.exp), C.red], ["صافي الربح", months.map(m => m.profit), C.accent]].map(([label, vals, color]) =>
+              React.createElement("tr", { key: label, style: { borderBottom: "1px solid " + C.border } },
+                React.createElement("td", { style: { padding: "8px 10px", fontWeight: 700, color: C.text, fontSize: 13, fontFamily: "Tajawal,sans-serif" } }, label),
+                ...vals.map((v, i) => React.createElement("td", { key: i, style: { ...tdStyle, color: v >= 0 ? color : C.red } }, "$" + v.toLocaleString()))
+              )
+            )
+          )
+        )
+      )
+    ),
+    React.createElement("div", { style: { marginTop: 16 } },
+      React.createElement(Card, { title: "مخطط المبيعات" }, React.createElement(MiniBarChart, { data: months.map(m => ({ label: m.label.slice(0, 6), value: m.rev })), color: C.green, height: 100 }))
+    )
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 6: سجل التدقيق
+// ═══════════════════════════════════════════════════════════════
+const AuditLogModule = ({ auditLog }) => {
+  const [search, setSearch] = React.useState("");
+  const logs = (auditLog || []).filter(l => !search || (l.action + l.description + l.user).toLowerCase().includes(search.toLowerCase()));
+  return React.createElement("div", null,
+    React.createElement("h2", { style: { color: C.text, margin: "0 0 16px", fontSize: 20, fontWeight: 800, fontFamily: "Tajawal,sans-serif" } }, "📋 سجل التدقيق"),
+    React.createElement("input", { type: "text", value: search, onChange: e => setSearch(e.target.value), placeholder: "🔍 بحث في السجل...",
+      style: { width: "100%", padding: "9px 14px", border: "1px solid " + C.border, borderRadius: 8, fontFamily: "Tajawal,sans-serif", fontSize: 13, direction: "rtl", marginBottom: 12, outline: "none", boxSizing: "border-box" }
+    }),
+    React.createElement(Card, null,
+      logs.length === 0
+        ? React.createElement("div", { style: { color: C.muted, textAlign: "center", padding: 30, fontSize: 13 } }, "لا توجد سجلات")
+        : React.createElement("div", { style: { maxHeight: 500, overflowY: "auto" } },
+            logs.map(l => React.createElement("div", { key: l.id,
+              style: { display: "flex", gap: 10, padding: "8px 4px", borderBottom: "1px solid " + C.border, alignItems: "flex-start" }
+            },
+              React.createElement("div", { style: { fontSize: 10, color: C.muted, minWidth: 110, direction: "ltr", flexShrink: 0 } }, new Date(l.timestamp).toLocaleString("ar-EG")),
+              React.createElement(Badge, { color: C.accent }, l.action),
+              React.createElement("div", { style: { color: C.text, fontSize: 12, flex: 1, fontFamily: "Tajawal,sans-serif" } }, l.description),
+              React.createElement("div", { style: { fontSize: 11, color: C.muted, flexShrink: 0 } }, l.user)
+            ))
+          )
+    )
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 5: لوحة الأمان في الإعدادات
+// ═══════════════════════════════════════════════════════════════
+const SecurityPanel = ({ data, users, setUsers }) => {
+  const [msg, setMsg] = React.useState("");
+  const migratePasswords = () => {
+    const migrated = users.map(u => {
+      if (u.password && !u.password.startsWith("ph_")) {
+        return { ...u, password: hashPasswordSync(u.password) };
+      }
+      return u;
+    });
+    setUsers(migrated);
+    setMsg("✅ تم تشفير كلمات المرور بنجاح! (" + migrated.filter(u => u.password.startsWith("ph_")).length + " مستخدم)");
+  };
+  return React.createElement(Card, { title: "🔒 الأمان وكلمات المرور" },
+    React.createElement("div", { style: { padding: "16px 0" } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid " + C.border } },
+        React.createElement("div", null,
+          React.createElement("div", { style: { fontWeight: 700, color: C.text, fontSize: 14, fontFamily: "Tajawal,sans-serif" } }, "تشفير كلمات المرور الحالية"),
+          React.createElement("div", { style: { color: C.muted, fontSize: 12, marginTop: 4, fontFamily: "Tajawal,sans-serif" } }, "تحويل كلمات المرور القديمة إلى صيغة مشفرة")
+        ),
+        React.createElement(Btn, { onClick: migratePasswords, variant: "primary", icon: "🔐" }, "تشفير الآن")
+      ),
+      React.createElement("div", { style: { padding: "12px 0", borderBottom: "1px solid " + C.border } },
+        React.createElement("div", { style: { fontWeight: 700, color: C.text, fontSize: 14, fontFamily: "Tajawal,sans-serif", marginBottom: 8 } }, "حالة كلمات المرور"),
+        (users || []).map(u => React.createElement("div", { key: u.id, style: { display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13 } },
+          React.createElement("span", { style: { fontFamily: "Tajawal,sans-serif" } }, u.name || u.username),
+          React.createElement(Badge, { color: u.password && u.password.startsWith("ph_") ? C.green : C.red },
+            u.password && u.password.startsWith("ph_") ? "🔒 مشفر" : "⚠️ نص واضح"
+          )
+        ))
+      ),
+      msg && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: "#e8f5e9", borderRadius: 8, color: C.green, fontSize: 13, fontFamily: "Tajawal,sans-serif" } }, msg)
+    )
+  );
+};
+
 const Dashboard = ({ data }) => {
   const { products, sales, purchases, maintenance, customers, expenses } = data;
   const totalRevenue = sales.reduce((s, sale) => s + sale.total, 0);
@@ -2318,7 +2590,7 @@ const Dashboard = ({ data }) => {
     return is + (p?.cost || 0) * item.qty;
   }, 0), 0);
   const netProfit = totalRevenue - totalCOGS - totalExpenses;
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 24 } }, /* @__PURE__ */ React.createElement("h2", { style: { color: C.text, margin: "0 0 4px", fontSize: 22, fontWeight: 800 } }, "\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, margin: 0, fontSize: 13 } }, "\u0645\u0631\u062D\u0628\u0627\u064B ", data.currentUser?.name, " \u2014 \u0627\u0644\u0647\u0631\u0645 \u0644\u0644\u0627\u062A\u0635\u0627\u0644\u0627\u062A | ", (/* @__PURE__ */ new Date()).toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 } }, /* @__PURE__ */ React.createElement(StatCard, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `$${totalRevenue.toLocaleString()}`, icon: "\u{1F4B0}", color: C.green, sub: `${todaySales.length} \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u064A\u0648\u0645` }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D", value: `$${netProfit.toLocaleString()}`, icon: "\u{1F4CA}", color: netProfit >= 0 ? C.accent : C.red }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0635\u064A\u0627\u0646\u0629", value: pendingMaintenance.length, icon: "\u{1F527}", color: C.yellow, sub: "\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629" }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u062A\u062D\u0630\u064A\u0631\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646", value: lowStockItems.length, icon: "\u26A0\uFE0F", color: lowStockItems.length > 0 ? C.red : C.green, sub: lowStockItems.length > 0 ? "\u0645\u0646\u062A\u062C\u0627\u062A \u0646\u0627\u0642\u0635\u0629" : "\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u062C\u064A\u062F" })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement(Card, { title: "\u0622\u062E\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", action: /* @__PURE__ */ React.createElement(Badge, { color: C.accent }, sales.length, " \u0641\u0627\u062A\u0648\u0631\u0629") }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 24 } }, /* @__PURE__ */ React.createElement("h2", { style: { color: C.text, margin: "0 0 4px", fontSize: 22, fontWeight: 800 } }, "\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, margin: 0, fontSize: 13 } }, "\u0645\u0631\u062D\u0628\u0627\u064B ", data.currentUser?.name, " \u2014 \u0627\u0644\u0647\u0631\u0645 \u0644\u0644\u0627\u062A\u0635\u0627\u0644\u0627\u062A | ", (/* @__PURE__ */ new Date()).toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" }))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 } }, /* @__PURE__ */ React.createElement(StatCard, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `$${totalRevenue.toLocaleString()}`, icon: "\u{1F4B0}", color: C.green, sub: `${todaySales.length} \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u064A\u0648\u0645` }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0631\u0628\u062D", value: `$${netProfit.toLocaleString()}`, icon: "\u{1F4CA}", color: netProfit >= 0 ? C.accent : C.red }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0635\u064A\u0627\u0646\u0629", value: pendingMaintenance.length, icon: "\u{1F527}", color: C.yellow, sub: "\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629" }), /* @__PURE__ */ React.createElement(StatCard, { label: "\u062A\u062D\u0630\u064A\u0631\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646", value: lowStockItems.length, icon: "\u26A0\uFE0F", color: lowStockItems.length > 0 ? C.red : C.green, sub: lowStockItems.length > 0 ? "\u0645\u0646\u062A\u062C\u0627\u062A \u0646\u0627\u0642\u0635\u0629" : "\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u062C\u064A\u062F" })), React.createElement(DashboardCharts,{sales,expenses}), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement(Card, { title: "\u0622\u062E\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", action: /* @__PURE__ */ React.createElement(Badge, { color: C.accent }, sales.length, " \u0641\u0627\u062A\u0648\u0631\u0629") }, /* @__PURE__ */ React.createElement(
     Table,
     {
       headers: ["\u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", "\u0627\u0644\u0639\u0645\u064A\u0644", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u0645\u0628\u0644\u063A"],
@@ -2333,7 +2605,7 @@ const Dashboard = ({ data }) => {
     const count = maintenance.filter((m) => m.status === status).length;
     const color = { "\u0642\u064A\u062F \u0627\u0644\u0625\u0635\u0644\u0627\u062D": C.yellow, "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0642\u0637\u0639": C.orange, "\u062C\u0627\u0647\u0632 \u0644\u0644\u0627\u0633\u062A\u0644\u0627\u0645": C.green }[status];
     return /* @__PURE__ */ React.createElement("div", { key: status, style: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontSize: 12 } }, status), /* @__PURE__ */ React.createElement(Badge, { color }, count));
-  })))));
+  ))), React.createElement("div",{style:{marginTop:16}}, React.createElement(DebtAlertsCard,{customers}))));
 };
 const CatalogRow = ({ p, entries, addFromCatalog, usdRate }) => {
   const entry = entries.find((e) => e.productId === p.id);
@@ -4440,6 +4712,9 @@ const NAV = [
   { id: "entry", label: "\u0627\u0644\u0625\u062F\u062E\u0627\u0644", icon: "\u{1F4DD}" },
   { id: "ledger", label: "\u062F\u0641\u062A\u0631 \u0627\u0644\u064A\u0648\u0645\u064A\u0629", icon: "\u{1F4D2}" },
   { id: "reports", label: "\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631", icon: "\u{1F4C8}" },
+  { id: "financial_statements", label: "القوائم المالية", icon: "\u{1F4CA}" },
+  { id: "comparison_reports", label: "تقارير مقارنة", icon: "\u{1F4C9}" },
+  { id: "audit_log", label: "سجل التدقيق", icon: "\u{1F4CB}" },
   { id: "providers", label: "\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0645\u0632\u0648\u062f\u064a\u0646", icon: "\u{1F310}" },
   { id: "settings", label: "\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A", icon: "\u2699\uFE0F" }
 ];
@@ -4528,7 +4803,7 @@ const SettingsModule = ({ data, update }) => {
   };
   const addUser = () => {
     if (!userForm.username || !userForm.password) return;
-    setUsers([...users, { id: Date.now(), ...userForm, permissions: userForm.role === "admin" ? ["all"] : ["sales", "customers"] }]);
+    setUsers([...users, { id: Date.now(), ...userForm, password: hashPasswordSync(userForm.password), permissions: userForm.role === "admin" ? ["all"] : ["sales", "customers"] }]);
     setUserModal(false);
     setUserForm({ username: "", password: "", name: "", role: "cashier" });
   };
@@ -4576,7 +4851,8 @@ const SettingsModule = ({ data, update }) => {
     { id: "receipt", label: "\u062A\u0635\u0645\u064A\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", icon: "\u{1F9FE}" },
     { id: "tax", label: "\u0627\u0644\u0636\u0631\u064A\u0628\u0629", icon: "\u{1F4CB}" },
     { id: "users", label: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646", icon: "\u{1F465}" },
-    { id: "backup", label: "\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A", icon: "\u{1F4BE}" }
+    { id: "backup", label: "\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A", icon: "\u{1F4BE}" },
+    { id: "security", label: "الأمان", icon: "\u{1F512}" }
   ];
   const SwitchToggle = ({ value, onChange, label }) => /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontSize: 14 } }, label), /* @__PURE__ */ React.createElement("div", { onClick: () => onChange(!value), style: { width: 46, height: 26, background: value ? C.accent : "rgba(0,0,0,0.12)", borderRadius: 13, cursor: "pointer", position: "relative", transition: "all 0.2s" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 20, height: 20, background: "#fff", borderRadius: 10, position: "absolute", top: 3, right: value ? 3 : 23, transition: "all 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" } })));
   return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("h2", { style: { color: C.text, margin: 0, fontSize: 20, fontWeight: 800 } }, "\u2699\uFE0F \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } }, saved && /* @__PURE__ */ React.createElement("span", { style: { color: C.green, fontSize: 13, fontWeight: 600 } }, "\u2713 \u062A\u0645 \u0627\u0644\u062D\u0641\u0638!"), /* @__PURE__ */ React.createElement(Btn, { onClick: saveAll, variant: "primary", icon: "\u{1F4BE}" }, "\u062D\u0641\u0638 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "200px 1fr", gap: 16, alignItems: "start" } }, /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" } }, tabs.map((t) => /* @__PURE__ */ React.createElement(
@@ -4667,7 +4943,7 @@ const SettingsModule = ({ data, update }) => {
         /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => deleteUser(u.id), style: { background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 15 } }, "\u{1F5D1}\uFE0F"))
       ])
     }
-  )), /* @__PURE__ */ React.createElement(Modal, { open: userModal, onClose: () => setUserModal(false), title: "\u0645\u0633\u062A\u062E\u062F\u0645 \u062C\u062F\u064A\u062F", size: "sm" }, /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644", value: userForm.name, onChange: (v) => setUserForm({ ...userForm, name: v }), required: true }), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" } }, /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645", value: userForm.username, onChange: (v) => setUserForm({ ...userForm, username: v }), required: true }), /* @__PURE__ */ React.createElement(Input, { label: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631", value: userForm.password, onChange: (v) => setUserForm({ ...userForm, password: v }), type: "password", required: true }), /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629", value: userForm.role, onChange: (v) => setUserForm({ ...userForm, role: v }), options: [{ value: "admin", label: "\u0645\u062F\u064A\u0631" }, { value: "cashier", label: "\u0643\u0627\u0634\u064A\u0631" }, { value: "viewer", label: "\u0639\u0631\u0636 \u0641\u0642\u0637" }] })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => setUserModal(false), variant: "ghost" }, "\u0625\u0644\u063A\u0627\u0621"), /* @__PURE__ */ React.createElement(Btn, { onClick: addUser, variant: "primary" }, "\u{1F4BE} \u0625\u0636\u0627\u0641\u0629")))), activeTab === "backup" && /* @__PURE__ */ React.createElement(Card, { title: "\u{1F4BE} \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u0648\u0627\u0644\u0627\u0633\u062A\u0639\u0627\u062F\u0629" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: `rgba(209,134,37,0.06)`, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 10 } }, "\u{1F4E4}"), /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 6 } }, "\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12, marginBottom: 16 } }, "\u062A\u0646\u0632\u064A\u0644 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
+  )), /* @__PURE__ */ React.createElement(Modal, { open: userModal, onClose: () => setUserModal(false), title: "\u0645\u0633\u062A\u062E\u062F\u0645 \u062C\u062F\u064A\u062F", size: "sm" }, /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644", value: userForm.name, onChange: (v) => setUserForm({ ...userForm, name: v }), required: true }), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" } }, /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645", value: userForm.username, onChange: (v) => setUserForm({ ...userForm, username: v }), required: true }), /* @__PURE__ */ React.createElement(Input, { label: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631", value: userForm.password, onChange: (v) => setUserForm({ ...userForm, password: v }), type: "password", required: true }), /* @__PURE__ */ React.createElement(Input, { label: "\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629", value: userForm.role, onChange: (v) => setUserForm({ ...userForm, role: v }), options: [{ value: "admin", label: "\u0645\u062F\u064A\u0631" }, { value: "cashier", label: "\u0643\u0627\u0634\u064A\u0631" }, { value: "viewer", label: "\u0639\u0631\u0636 \u0641\u0642\u0637" }] })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => setUserModal(false), variant: "ghost" }, "\u0625\u0644\u063A\u0627\u0621"), /* @__PURE__ */ React.createElement(Btn, { onClick: addUser, variant: "primary" }, "\u{1F4BE} \u0625\u0636\u0627\u0641\u0629")))), activeTab === "security" && React.createElement(SecurityPanel,{users,setUsers,data}) || activeTab === "backup" && /* @__PURE__ */ React.createElement(Card, { title: "\u{1F4BE} \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u0648\u0627\u0644\u0627\u0633\u062A\u0639\u0627\u062F\u0629" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: `rgba(209,134,37,0.06)`, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 10 } }, "\u{1F4E4}"), /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 6 } }, "\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12, marginBottom: 16 } }, "\u062A\u0646\u0632\u064A\u0644 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
     const keys = ["products", "categories", "sales", "purchases", "suppliers", "customers", "maintenance", "employees", "expenses", "bankAccounts"];
     const backup = {};
     keys.forEach((k) => {
@@ -4711,7 +4987,7 @@ const SettingsModule = ({ data, update }) => {
   }, variant: "danger", size: "sm", icon: "\u{1F5D1}\uFE0F" }, "\u0645\u0633\u062D \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"))))));
 };
 function App() {
-  const { data, update, nextId, moveCash } = useStore();
+  const { data, update, nextId, moveCash, addAudit } = useStore();
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   useEffect(() => {
@@ -4736,6 +5012,7 @@ function App() {
   const handleSale = (sale) => {
     const id = nextId("sale");
     update("sales", [...data.sales, { ...sale, id }]);
+    if(addAudit) addAudit("مبيعات","فاتورة: "+sale.invoiceNo+" — "+sale.customerName+" — $"+sale.total);
     const isTRY = sale.currency === "TRY", isEUR = sale.currency === "EUR";
     moveCash({
       type: "\u0645\u0628\u064A\u0639\u0627\u062A",
@@ -4823,6 +5100,12 @@ function App() {
         return /* @__PURE__ */ React.createElement(ReportsModule, { ...props });
       case "settings":
         return /* @__PURE__ */ React.createElement(SettingsModule, { data, update });
+      case "financial_statements":
+        return React.createElement(FinancialStatementsModule, { sales:data.sales, purchases:data.purchases, expenses:data.expenses, products:data.products, customers:data.customers, suppliers:data.suppliers, bankAccounts:data.bankAccounts, cashBox:data.cashBox });
+      case "comparison_reports":
+        return React.createElement(ComparisonReportsModule, { sales:data.sales, expenses:data.expenses, purchases:data.purchases });
+      case "audit_log":
+        return React.createElement(AuditLogModule, { auditLog:data.auditLog });
       default:
         return /* @__PURE__ */ React.createElement(Dashboard, { data });
     }
@@ -4837,7 +5120,7 @@ function App() {
         input, select, textarea { direction:rtl; }
         @media print { .no-print { display:none!important; } }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-      `), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", minHeight: "100vh", background: "#faf7f2" } }, /* @__PURE__ */ React.createElement("div", { className: "no-print", style: { width: sidebarOpen ? 220 : 64, background: C.surface, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width 0.3s", overflow: "hidden", position: "fixed", right: 0, top: 0, bottom: 0, zIndex: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { padding: "16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10, minHeight: 64 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(DynamicLogo, { size: 36 })), sidebarOpen && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" } }, "\u0627\u0644\u0647\u0631\u0645 \u0644\u0644\u0627\u062A\u0635\u0627\u0644\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 10 } }, "ERP System"))), /* @__PURE__ */ React.createElement("nav", { style: { flex: 1, overflow: "auto", padding: "8px 0" } }, NAV.map((item) => /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setPage(item.id), style: { width: "100%", padding: `10px ${sidebarOpen ? "16px" : "14px"}`, background: page === item.id ? "rgba(209,134,37,0.12)" : "none", border: "none", borderRight: page === item.id ? `3px solid ${C.accent}` : "3px solid transparent", color: page === item.id ? C.accent : C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "Tajawal,sans-serif", fontSize: 13, fontWeight: page === item.id ? 700 : 500, textAlign: "right", transition: "all 0.2s", whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, flexShrink: 0 } }, item.icon), sidebarOpen && item.label))), /* @__PURE__ */ React.createElement("div", { style: { padding: 8, borderTop: `1px solid ${C.border}` } }, sidebarOpen && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontSize: 13, fontWeight: 600 } }, data.currentUser?.name), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 11 } }, data.currentUser?.role)), /* @__PURE__ */ React.createElement("button", { onClick: () => update("currentUser", null), style: { width: "100%", padding: `10px ${sidebarOpen ? "16px" : "14px"}`, background: "none", border: "none", color: C.red, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "Tajawal,sans-serif", fontSize: 13, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F6AA}"), sidebarOpen && "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, marginRight: sidebarOpen ? 220 : 64, transition: "margin 0.3s", display: "flex", flexDirection: "column" } }, /* @__PURE__ */ React.createElement("div", { className: "no-print", style: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSidebarOpen(!sidebarOpen), style: { background: "none", border: `1px solid ${C.border}`, color: C.text, width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 16 } }, sidebarOpen ? "\u25C0" : "\u25B6"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { style: { color: C.text, fontSize: 16, fontWeight: 800, margin: 0 } }, NAV.find((n) => n.id === page)?.label || "\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, data.products.filter((p) => p.stock <= p.minStock).length > 0 && /* @__PURE__ */ React.createElement("div", { style: { background: `${C.red}22`, border: `1px solid ${C.red}`, borderRadius: 8, padding: "4px 10px", color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", data.products.filter((p) => p.stock <= p.minStock).length, " \u0645\u0646\u062A\u062C \u0646\u0627\u0642\u0635"), /* @__PURE__ */ React.createElement(CashBoxWidget, { cashBox: data.cashBox, onClick: () => setPage("cashbox") }), /* @__PURE__ */ React.createElement("div", { style: { background: C.card, borderRadius: 8, padding: "6px 12px", color: C.text, fontSize: 12 } }, "\u{1F4B3} ", data.currentUser?.role))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: 20, overflow: "auto" } }, renderPage()))));
+      `), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", minHeight: "100vh", background: "#faf7f2" } }, /* @__PURE__ */ React.createElement("div", { className: "no-print", style: { width: sidebarOpen ? 220 : 64, background: C.surface, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width 0.3s", overflow: "hidden", position: "fixed", right: 0, top: 0, bottom: 0, zIndex: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { padding: "16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10, minHeight: 64 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(DynamicLogo, { size: 36 })), sidebarOpen && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" } }, "\u0627\u0644\u0647\u0631\u0645 \u0644\u0644\u0627\u062A\u0635\u0627\u0644\u0627\u062A"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 10 } }, "ERP System"))), /* @__PURE__ */ React.createElement("nav", { style: { flex: 1, overflow: "auto", padding: "8px 0" } }, NAV.map((item) => /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setPage(item.id), style: { width: "100%", padding: `10px ${sidebarOpen ? "16px" : "14px"}`, background: page === item.id ? "rgba(209,134,37,0.12)" : "none", border: "none", borderRight: page === item.id ? `3px solid ${C.accent}` : "3px solid transparent", color: page === item.id ? C.accent : C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "Tajawal,sans-serif", fontSize: 13, fontWeight: page === item.id ? 700 : 500, textAlign: "right", transition: "all 0.2s", whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, flexShrink: 0 } }, item.icon), sidebarOpen && item.label))), /* @__PURE__ */ React.createElement("div", { style: { padding: 8, borderTop: `1px solid ${C.border}` } }, sidebarOpen && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.text, fontSize: 13, fontWeight: 600 } }, data.currentUser?.name), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 11 } }, data.currentUser?.role)), /* @__PURE__ */ React.createElement("button", { onClick: () => update("currentUser", null), style: { width: "100%", padding: `10px ${sidebarOpen ? "16px" : "14px"}`, background: "none", border: "none", color: C.red, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "Tajawal,sans-serif", fontSize: 13, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F6AA}"), sidebarOpen && "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, marginRight: sidebarOpen ? 220 : 64, transition: "margin 0.3s", display: "flex", flexDirection: "column" } }, /* @__PURE__ */ React.createElement("div", { className: "no-print", style: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSidebarOpen(!sidebarOpen), style: { background: "none", border: `1px solid ${C.border}`, color: C.text, width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 16 } }, sidebarOpen ? "\u25C0" : "\u25B6"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { style: { color: C.text, fontSize: 16, fontWeight: 800, margin: 0 } }, NAV.find((n) => n.id === page)?.label || "\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, data.products.filter((p) => p.stock <= p.minStock).length > 0 && /* @__PURE__ */ React.createElement("div", { style: { background: `${C.red}22`, border: `1px solid ${C.red}`, borderRadius: 8, padding: "4px 10px", color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", data.products.filter((p) => p.stock <= p.minStock).length, " \u0645\u0646\u062A\u062C \u0646\u0627\u0642\u0635"), /* @__PURE__ */ React.createElement(CashBoxWidget, { cashBox: data.cashBox, onClick: () => setPage("cashbox") }), React.createElement(NotificationBell,{products:data.products,maintenance:data.maintenance,customers:data.customers}), /* @__PURE__ */ React.createElement("div", { style: { background: C.card, borderRadius: 8, padding: "6px 12px", color: C.text, fontSize: 12 } }, "\u{1F4B3} ", data.currentUser?.role))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: 20, overflow: "auto" } }, renderPage()))));
 }
 ;(function(){
   ["products","sales","purchases","users","cashBox","nextId","cashLedger"].forEach(function(k){try{var v=localStorage.getItem("erp_"+k);if(v)JSON.parse(v);}catch(e){localStorage.removeItem("erp_"+k);}});
